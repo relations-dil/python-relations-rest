@@ -1,7 +1,7 @@
 ACCOUNT=gaf3
 IMAGE=relations-rest
 INSTALL=python:3.8.5-alpine3.12
-VERSION?=0.1.0
+VERSION?=0.2.0
 DEBUG_PORT=5678
 TTY=$(shell if tty -s; then echo "-it"; fi)
 VOLUMES=-v ${PWD}/lib:/opt/service/lib \
@@ -34,11 +34,10 @@ setup:
 	apk update && apk add git && \
 	pip install \
 		git+https://github.com/gaf3/opengui.git@0.8.3#egg=opengui \
-		git+https://github.com/relations-dil/python-relations.git@0.6.9#egg=python-relations \
-		git+https://github.com/relations-dil/python-relations-restx.git@0.2.0#egg=python-relations-restx && \
+		git+https://github.com/relations-dil/python-relations.git@0.6.10#egg=python-relations \
+		git+https://github.com/relations-dil/python-relations-restx.git@0.4.0#egg=python-relations-restx && \
 	python setup.py install && \
-	python -m relations_restx.source && \
-	python -m relations_restx.unittest"
+	python -m relations_rest.source"
 
 tag:
 	-git tag -a $(VERSION) -m "Version $(VERSION)"

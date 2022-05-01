@@ -1,7 +1,6 @@
 import unittest
 import unittest.mock
 import relations.unittest
-import relations_restx.unittest
 
 import flask
 import flask_restx
@@ -9,9 +8,9 @@ import flask_restx
 import ipaddress
 
 import relations
-import relations_rest
 import relations_restx
 
+import relations_rest
 
 class SourceModel(relations.Model):
     SOURCE = "TestRestSource"
