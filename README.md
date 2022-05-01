@@ -1,3 +1,3 @@
-# python-relations-restx
+# python-relations-rest
 
 DB/API Modeling API
