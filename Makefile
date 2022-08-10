@@ -1,7 +1,7 @@
 ACCOUNT=gaf3
 IMAGE=relations-rest
 INSTALL=python:3.8.5-alpine3.12
-VERSION?=0.2.0
+VERSION?=0.3.0
 DEBUG_PORT=5678
 TTY=$(shell if tty -s; then echo "-it"; fi)
 VOLUMES=-v ${PWD}/lib:/opt/service/lib \
@@ -12,7 +12,11 @@ ENVIRONMENT=-e PYTHONDONTWRITEBYTECODE=1 \
 			-e PYTHONUNBUFFERED=1 \
 			-e test="python -m unittest -v" \
 			-e debug="python -m ptvsd --host 0.0.0.0 --port 5678 --wait -m unittest -v"
-.PHONY: build shell debug test lint verify tag untag
+PYPI=-v ${PWD}/LICENSE.txt:/opt/service/LICENSE.txt \
+	-v ${PWD}/PYPI.md:/opt/service/README.md \
+	-v ${HOME}/.pypirc:/opt/service/.pypirc
+
+.PHONY: build shell debug test lint verify tag untag testpypi pypi
 
 build:
 	docker build --no-cache . -t $(ACCOUNT)/$(IMAGE):$(VERSION)
@@ -30,12 +34,7 @@ lint:
 	docker run $(TTY) $(VOLUMES) $(ENVIRONMENT) $(ACCOUNT)/$(IMAGE):$(VERSION) sh -c "pylint --rcfile=.pylintrc lib/"
 
 setup:
-	docker run $(TTY) $(VOLUMES) $(INSTALL) sh -c "cp -r /opt/service /opt/install && cd /opt/install/ && \
-	apk update && apk add git && \
-	pip install \
-		git+https://github.com/gaf3/opengui.git@0.8.3#egg=opengui \
-		git+https://github.com/relations-dil/python-relations.git@0.6.10#egg=python-relations \
-		git+https://github.com/relations-dil/python-relations-restx.git@0.4.0#egg=python-relations-restx && \
+	docker run $(TTY) $(VOLUMES) $(PYPI) $(INSTALL) sh -c "cp -r /opt/service /opt/install && cd /opt/install/ && \
 	python setup.py install && \
 	python -m relations_rest.source"
 
@@ -46,3 +45,13 @@ tag:
 untag:
 	-git tag -d $(VERSION)
 	git push origin ":refs/tags/$(VERSION)"
+
+testpypi:
+	docker run $(TTY) $(VOLUMES) $(PYPI) gaf3/pypi sh -c "cd /opt/service && \
+	python -m build && \
+	python -m twine upload -r testpypi --config-file=.pypirc dist/*"
+
+pypi:
+	docker run $(TTY) $(VOLUMES) $(PYPI) gaf3/pypi sh -c "cd /opt/service && \
+	python -m build && \
+	python -m twine upload --config-file=.pypirc dist/*"

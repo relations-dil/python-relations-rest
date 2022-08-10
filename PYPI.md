@@ -1,4 +1,4 @@
-# python-relations-rest
+# relations-rest
 
 API Modeling through REST
 
