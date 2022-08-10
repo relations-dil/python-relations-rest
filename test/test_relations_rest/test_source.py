@@ -13,7 +13,7 @@ import relations_restx
 import relations_rest
 
 class SourceModel(relations.Model):
-    SOURCE = "TestRestSource"
+    SOURCE = "RestSource"
 
 class Simple(SourceModel):
     id = int
@@ -88,7 +88,7 @@ class TestSource(unittest.TestCase):
     def setUp(self):
 
         class ResourceModel(relations.Model):
-            SOURCE = "TestRestXResource"
+            SOURCE = "RestXResource"
 
         class Simple(ResourceModel):
             id = int
@@ -177,7 +177,7 @@ class TestSource(unittest.TestCase):
         class CaseResource(relations_restx.Resource):
             MODEL = Case
 
-        self.resource = relations.unittest.MockSource("TestRestXResource")
+        self.resource = relations.unittest.MockSource("RestXResource")
 
         self.app = flask.Flask("source-api")
         restx = flask_restx.Api(self.app)
@@ -192,7 +192,7 @@ class TestSource(unittest.TestCase):
         restx.add_resource(TestResource, '/test', '/test/<id>')
         restx.add_resource(CaseResource, '/case', '/case/<id>')
 
-        self.source = relations_rest.Source("TestRestSource", "", self.app.test_client())
+        self.source = relations_rest.Source("RestSource", "", self.app.test_client())
 
         def result(model, key, response):
 
