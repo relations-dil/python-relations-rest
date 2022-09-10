@@ -1,12 +1,13 @@
 ACCOUNT=gaf3
 IMAGE=relations-rest
 INSTALL=python:3.8.5-alpine3.12
-VERSION?=0.3.0
+VERSION?=$(shell cat VERSION)
 DEBUG_PORT=5678
 TTY=$(shell if tty -s; then echo "-it"; fi)
 VOLUMES=-v ${PWD}/lib:/opt/service/lib \
 		-v ${PWD}/test:/opt/service/test \
 		-v ${PWD}/.pylintrc:/opt/service/.pylintrc \
+		-v ${PWD}/VERSION:/opt/service/VERSION \
 		-v ${PWD}/setup.py:/opt/service/setup.py
 ENVIRONMENT=-e PYTHONDONTWRITEBYTECODE=1 \
 			-e PYTHONUNBUFFERED=1 \
@@ -36,7 +37,7 @@ lint:
 setup:
 	docker run $(TTY) $(VOLUMES) $(PYPI) $(INSTALL) sh -c "cp -r /opt/service /opt/install && cd /opt/install/ && \
 	python setup.py install && \
-	python -m relations_rest.source"
+	python -m relations_rest"
 
 tag:
 	-git tag -a $(VERSION) -m "Version $(VERSION)"
@@ -48,10 +49,10 @@ untag:
 
 testpypi:
 	docker run $(TTY) $(VOLUMES) $(PYPI) gaf3/pypi sh -c "cd /opt/service && \
-	python -m build && \
+	BUILD_VERSION='$(VERSION)' python -m build && \
 	python -m twine upload -r testpypi --config-file=.pypirc dist/*"
 
 pypi:
 	docker run $(TTY) $(VOLUMES) $(PYPI) gaf3/pypi sh -c "cd /opt/service && \
-	python -m build && \
+	BUILD_VERSION='$(VERSION)' python -m build && \
 	python -m twine upload --config-file=.pypirc dist/*"
