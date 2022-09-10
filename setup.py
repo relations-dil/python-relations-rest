@@ -1,22 +1,27 @@
 #!/usr/bin/env python
 
+import os
 from setuptools import setup
 
 with open("README.md", "r") as readme_file:
     long_description = readme_file.read()
 
+version = os.environ.get("BUILD_VERSION")
+
+if version is None:
+    with open("VERSION", "r") as version_file:
+        version = version_file.read().strip()
+
 setup(
     name="relations-rest",
-    version="0.3.0",
+    version=version,
     package_dir = {'': 'lib'},
     py_modules = [
-        'relations_rest',
-        'relations_rest.source',
-        'relations_rest.unittest'
+        'relations_rest'
     ],
     install_requires=[
         'requests==2.25.1',
-        'relations-restx==0.6.1'
+        'relations-dil==0.6.11'
     ],
     url="https://github.com/relations-dil/python-relations-rest",
     author="Gaffer Fitch",
