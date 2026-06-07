@@ -1,4 +1,4 @@
-relations-restx==0.6.2
+relations-restx @ git+https://github.com/relations-dil/python-relations-restx.git@f75e12ed721c9bc7cee1f7334a3cc5022aaabd5a
 requests==2.25.1
 ptvsd==4.3.2
 coverage==5.2.1

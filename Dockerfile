@@ -4,6 +4,8 @@ RUN mkdir -p /opt/service
 
 WORKDIR /opt/service
 
+RUN apk add --no-cache git
+
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt

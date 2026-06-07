@@ -170,19 +170,39 @@ class Source(relations.Source):
                 return None
 
             model._record = model._build("update", _read=matches[0])
+            model._action = "update"
+            self.retrieve_ties(model, matches[0])
 
-        else:
+            return model
 
-            model._models = []
+        model._models = []
 
-            for match in matches:
-                model._models.append(model.__class__(_read=match))
+        for match in matches:
+            retrieved = model.__class__(_read=match)
+            self.retrieve_ties(retrieved, match)
+            model._models.append(retrieved)
 
-            model._record = None
-
+        model._record = None
         model._action = "update"
 
         return model
+
+    @staticmethod
+    def retrieve_ties(model, read):
+        """
+        Loads the tie ids the API already resolved onto the model
+
+        Other Sources query the tie table in retrieve_ties; the REST API has no tie
+        endpoint but returns the resolved ids inline, so we read them off the response.
+        """
+
+        for relation in model.SISTERS.values():
+            if relation.brother_sister_ref in read:
+                model[relation.brother_sister_ref] = read[relation.brother_sister_ref]
+
+        for relation in model.BROTHERS.values():
+            if relation.sister_brother_ref in read:
+                model[relation.sister_brother_ref] = read[relation.sister_brother_ref]
 
     def titles(self, model):
         """

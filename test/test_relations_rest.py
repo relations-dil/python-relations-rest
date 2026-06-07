@@ -81,6 +81,23 @@ class Case(SourceModel):
 relations.OneToMany(Unit, Test)
 relations.OneToOne(Test, Case)
 
+class Sis(SourceModel):
+    id = int
+    name = str
+    bro_id = set
+
+class Bro(SourceModel):
+    id = int
+    name = str
+    sis_id = set
+
+class SisBro(SourceModel):
+    ID = None
+    bro_id = int
+    sis_id = int
+
+relations.ManyToMany(Sis, Bro, SisBro)
+
 class TestSource(unittest.TestCase):
 
     maxDiff = None
@@ -168,6 +185,23 @@ class TestSource(unittest.TestCase):
         relations.OneToMany(Unit, Test)
         relations.OneToOne(Test, Case)
 
+        class Sis(ResourceModel):
+            id = int
+            name = str
+            bro_id = set
+
+        class Bro(ResourceModel):
+            id = int
+            name = str
+            sis_id = set
+
+        class SisBro(ResourceModel):
+            ID = None
+            bro_id = int
+            sis_id = int
+
+        relations.ManyToMany(Sis, Bro, SisBro)
+
         class UnitResource(relations_restx.Resource):
             MODEL = Unit
 
@@ -176,6 +210,12 @@ class TestSource(unittest.TestCase):
 
         class CaseResource(relations_restx.Resource):
             MODEL = Case
+
+        class SisResource(relations_restx.Resource):
+            MODEL = Sis
+
+        class BroResource(relations_restx.Resource):
+            MODEL = Bro
 
         self.resource = relations.unittest.MockSource("RestXResource")
 
@@ -191,6 +231,9 @@ class TestSource(unittest.TestCase):
         restx.add_resource(UnitResource, '/unit', '/unit/<id>')
         restx.add_resource(TestResource, '/test', '/test/<id>')
         restx.add_resource(CaseResource, '/case', '/case/<id>')
+
+        restx.add_resource(SisResource, '/sis', '/sis/<id>')
+        restx.add_resource(BroResource, '/bro', '/bro/<id>')
 
         self.source = relations_rest.Source("RestSource", "", self.app.test_client())
 
@@ -340,6 +383,65 @@ class TestSource(unittest.TestCase):
                 }
             }
         })
+
+    def test_create_ties(self):
+
+        tom = Bro("Tom").create()
+        dick = Bro("Dick").create()
+
+        mary = Sis("Mary", bro_id=[tom.id, dick.id]).create()
+
+        self.assertEqual(mary.bro.id, [dick.id, tom.id])
+
+        self.assertEqual(Sis.many(bro_id=[tom.id])[0].name, "Mary")
+
+    def test_retrieve_ties(self):
+
+        tom = Bro("Tom").create()
+        dick = Bro("Dick").create()
+        Sis("Mary", bro_id=[tom.id, dick.id]).create()
+        Sis("Sue", bro_id=[tom.id]).create()
+
+        self.assertEqual(Sis.one(name="Mary").bro.id, [dick.id, tom.id])
+
+        self.assertEqual(sorted(Sis.many(bro_id=[dick.id]).name), ["Mary"])
+
+    def test_update_ties(self):
+
+        tom = Bro("Tom").create()
+        dick = Bro("Dick").create()
+        harry = Bro("Harry").create()
+        mary = Sis("Mary", bro_id=[tom.id, dick.id]).create()
+
+        Sis.one(mary.id).set(bro_id=[dick.id, harry.id]).update()
+
+        self.assertEqual(sorted(Sis.one(mary.id).bro.id), sorted([dick.id, harry.id]))
+
+    def test_delete_ties(self):
+
+        tom = Bro("Tom").create()
+        mary = Sis("Mary", bro_id=[tom.id]).create()
+
+        Sis.one(mary.id).delete()
+
+        self.assertEqual(len(Sis.many()), 0)
+        self.assertEqual(len(Sis.many(bro_id=[tom.id])), 0)
+
+    def test_select_ties(self):
+
+        tom = Bro("Tom").create()
+        dick = Bro("Dick").create()
+        harry = Bro("Harry").create()
+
+        Sis("Mary", bro_id=[tom.id, dick.id]).create()
+        Sis("Sue", bro_id=[tom.id]).create()
+        Sis("Ann", bro_id=[dick.id, harry.id]).create()
+
+        self.assertEqual(sorted(Sis.many(bro_id__has=tom.id).name), ["Mary", "Sue"])
+        self.assertEqual(sorted(Sis.many(bro_id__any=[tom.id, harry.id]).name), ["Ann", "Mary", "Sue"])
+        self.assertEqual(Sis.many(bro_id__all=[tom.id, dick.id]).name, ["Mary"])
+        self.assertEqual(Sis.many(bro_id__not_has=tom.id).name, ["Ann"])
+        self.assertEqual(sorted(Sis.many(bro_id__not_any=[harry.id]).name), ["Mary", "Sue"])
 
     def test_count(self):
 
