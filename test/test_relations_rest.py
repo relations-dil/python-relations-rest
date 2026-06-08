@@ -443,6 +443,33 @@ class TestSource(unittest.TestCase):
         self.assertEqual(Sis.many(bro_id__not_has=tom.id).name, ["Ann"])
         self.assertEqual(sorted(Sis.many(bro_id__not_any=[harry.id]).name), ["Mary", "Sue"])
 
+    def test_attr_ties(self):
+
+        tom = Bro("Tom").create()
+        dick = Bro("Dick").create()
+        harry = Bro("Harry").create()
+
+        Sis("Mary", bro_id=[tom.id, dick.id]).create()
+        Sis("Sue", bro_id=[tom.id]).create()
+        Sis("Ann", bro_id=[dick.id, harry.id]).create()
+
+        # sibling-attribute filters serialize into the request and resolve server-side; existence
+        self.assertEqual(sorted(Sis.many(bro__name="Tom").name), ["Mary", "Sue"])
+        self.assertEqual(sorted(Sis.many(bro__name__in=["Tom", "Dick"]).name), ["Ann", "Mary", "Sue"])
+        self.assertEqual(Sis.many(bro__name__like="arr").name, ["Ann"])
+        self.assertEqual(sorted(Sis.many(bro__name__not_in=["Tom"]).name), ["Ann", "Mary"])
+        # criteria on the same relation filter the same tied brother
+        self.assertEqual(sorted(Sis.many(bro__name="Dick", bro__id=dick.id).name), ["Ann", "Mary"])
+        # count rides the same path
+        self.assertEqual(Sis.many(bro__name__in=["Tom", "Dick"]).count(), 3)
+
+        # symmetric: brothers by a tied sister's name
+        jane = Sis("Jane").create()
+        joan = Sis("Joan").create()
+        Bro("Bab", sis_id=[jane.id, joan.id]).create()
+        Bro("Bil", sis_id=[jane.id]).create()
+        self.assertEqual(sorted(Bro.many(sis__name="Jane").name), ["Bab", "Bil"])
+
     def test_count(self):
 
         Unit([["stuff"], ["people"]]).create()

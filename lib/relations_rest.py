@@ -118,6 +118,17 @@ class Source(relations.Source):
         for operator, value in (field.criteria or {}).items():
             criteria[f"{field.name}__{operator}"] = sorted(value) if isinstance(value, set) else value
 
+    @staticmethod
+    def filter_ties(model, criteria):
+        """
+        Adds sibling-attribute filters (model._ties, e.g. bro__name="Tom") to the filter so the
+        remote API resolves them through many(); the tie field lives on the model, not the record.
+        """
+
+        for name, attrs in model._ties.items():
+            for predicate, value in attrs.items():
+                criteria[f"{name}__{predicate}"] = sorted(value) if isinstance(value, set) else value
+
     def count(self, model):
         """
         Executes the retrieve
@@ -127,6 +138,7 @@ class Source(relations.Source):
 
         body = {"filter": {}}
         self.retrieve_record(model._record, body["filter"])
+        self.filter_ties(model, body["filter"])
 
         body["count"] = True
 
@@ -144,6 +156,7 @@ class Source(relations.Source):
 
         body = {"filter": {}}
         self.retrieve_record(model._record, body["filter"])
+        self.filter_ties(model, body["filter"])
 
         if model._like:
             body["filter"]["like"] = model._like
