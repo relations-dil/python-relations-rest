@@ -98,6 +98,17 @@ class SisBro(SourceModel):
 
 relations.ManyToMany(Sis, Bro, SisBro)
 
+class Owner(SourceModel):
+    id = int
+    name = str
+
+class Pet(SourceModel):
+    id = int
+    name = str
+    what = dict
+
+relations.OneToMany(Owner, Pet, child_inject="what")
+
 class TestSource(unittest.TestCase):
 
     maxDiff = None
@@ -217,6 +228,23 @@ class TestSource(unittest.TestCase):
         class BroResource(relations_restx.Resource):
             MODEL = Bro
 
+        class Owner(ResourceModel):
+            id = int
+            name = str
+
+        class Pet(ResourceModel):
+            id = int
+            name = str
+            what = dict
+
+        relations.OneToMany(Owner, Pet, child_inject="what")
+
+        class OwnerResource(relations_restx.Resource):
+            MODEL = Owner
+
+        class PetResource(relations_restx.Resource):
+            MODEL = Pet
+
         self.resource = relations.unittest.MockSource("RestXResource")
 
         self.app = flask.Flask("source-api")
@@ -234,6 +262,9 @@ class TestSource(unittest.TestCase):
 
         restx.add_resource(SisResource, '/sis', '/sis/<id>')
         restx.add_resource(BroResource, '/bro', '/bro/<id>')
+
+        restx.add_resource(OwnerResource, '/owner', '/owner/<id>')
+        restx.add_resource(PetResource, '/pet', '/pet/<id>')
 
         self.source = relations_rest.Source("RestSource", "", self.app.test_client())
 
@@ -384,6 +415,19 @@ class TestSource(unittest.TestCase):
             }
         })
 
+        # an injected key goes to the server by name and comes back, with or without a parent
+
+        owner = Owner("pat")
+        owner.pet.add("rex")
+        owner.create()
+
+        Pet(name="stray").create()
+
+        self.assertEqual(owner.id, 1)
+        self.assertEqual(owner.pet[0].owner_id, 1)
+        self.assertEqual(Pet.one(name="rex").owner_id, 1)
+        self.assertIsNone(Pet.one(name="stray").owner_id)
+
     def test_create_ties(self):
 
         tom = Bro("Tom").create()
@@ -479,6 +523,17 @@ class TestSource(unittest.TestCase):
         self.assertEqual(Unit.many(name="people").count(), 1)
 
         self.assertEqual(Unit.many(like="p").count(), 1)
+
+        # an injected key counts like any other
+
+        pat = Owner("pat").create()
+
+        Pet(name="rex", owner_id=pat.id).create()
+        Pet(name="stray").create()
+
+        self.assertEqual(Pet.many().count(), 2)
+        self.assertEqual(Pet.many(owner_id=pat.id).count(), 1)
+        self.assertEqual(Pet.many(owner_id=99).count(), 0)
 
     def test_retrieve(self):
 
@@ -626,6 +681,28 @@ class TestSource(unittest.TestCase):
         model = Net.many(subnet__max_value=int(ipaddress.IPv4Address('1.2.3.0')))
         self.assertEqual(len(model), 0)
 
+        # an injected key retrieves, filters and relates like a column
+
+        pat = Owner("pat").create()
+        sam = Owner("sam").create()
+
+        Pet(name="rex", owner_id=pat.id).create()
+        Pet(name="fido", owner_id=sam.id).create()
+        Pet(name="spot", owner_id=pat.id).create()
+        Pet(name="stray").create()
+
+        self.assertEqual(Pet.many(owner_id=pat.id).name, ["rex", "spot"])
+        self.assertEqual(Pet.many(owner_id__in=[pat.id, sam.id]).name, ["fido", "rex", "spot"])
+        self.assertEqual(Pet.many(owner_id__null=True).name, ["stray"])
+        self.assertEqual(Pet.many(owner_id=99).name, [])
+
+        self.assertEqual(Pet.one(name="rex").owner.name, "pat")
+        self.assertIsNone(Pet.one(name="stray").owner)
+
+        self.assertEqual(Owner.one(pat.id).pet.name, ["rex", "spot"])
+        self.assertEqual(Owner.many(pet__name="fido").name, ["sam"])
+        self.assertEqual(Pet.many(owner__name="pat").name, ["rex", "spot"])
+
     def test_titles(self):
 
         Unit("people").create().test.add("stuff").add("things").create()
@@ -755,6 +832,27 @@ class TestSource(unittest.TestCase):
 
         self.assertEqual(meta.things__a__b__0, 3)
 
+        # an injected key updates like a column
+
+        pat = Owner("pat").create()
+        sam = Owner("sam").create()
+
+        Pet(name="rex", owner_id=pat.id).create()
+
+        pet = Pet.one(name="rex")
+        pet.owner_id = sam.id
+
+        self.assertEqual(pet.update(), 1)
+        self.assertEqual(Pet.one(name="rex").owner_id, sam.id)
+
+        pet.owner_id = None
+
+        self.assertEqual(pet.update(), 1)
+        self.assertIsNone(Pet.one(name="rex").owner_id)
+
+        self.assertEqual(Pet.one(name="rex").set(owner_id=pat.id).update(), 1)
+        self.assertEqual(Pet.one(name="rex").owner_id, pat.id)
+
     def test_delete(self):
 
         unit = Unit("people")
@@ -771,3 +869,13 @@ class TestSource(unittest.TestCase):
 
         plain = Plain(0, "nope").create()
         self.assertRaisesRegex(relations.ModelError, "plain: nothing to delete from", plain.delete)
+
+        # an injected key deletes like any other
+
+        pat = Owner("pat").create()
+
+        Pet(name="rex", owner_id=pat.id).create()
+        Pet(name="stray").create()
+
+        self.assertEqual(Pet.many(owner_id=pat.id).delete(), 1)
+        self.assertEqual(Pet.many().name, ["stray"])
