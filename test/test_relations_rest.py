@@ -321,7 +321,24 @@ class TestSource(unittest.TestCase):
         response.status_code = 500
         response.json.return_value = {"message": "whoops"}
 
-        self.assertRaisesRegex(relations.ModelError, "moded: whoops", source.result, model, "whatevs", response)
+        with self.assertRaisesRegex(relations.ModelError, "moded: whoops") as caught:
+            source.result(model, "whatevs", response)
+
+        self.assertNotIsInstance(caught.exception, (relations.NotFoundError, relations.UniqueError))
+
+        # not found and a duplicate come back as their own errors
+
+        response = unittest.mock.MagicMock()
+        response.status_code = 404
+        response.json.return_value = {"message": "simple: none retrieved"}
+
+        self.assertRaisesRegex(relations.NotFoundError, "moded: simple: none retrieved", source.result, model, "whatevs", response)
+
+        response = unittest.mock.MagicMock()
+        response.status_code = 409
+        response.json.return_value = {"message": "simple: value violates unique name"}
+
+        self.assertRaisesRegex(relations.UniqueError, "moded: simple: value violates unique name", source.result, model, "whatevs", response)
 
     def test_init(self):
 
@@ -544,10 +561,10 @@ class TestSource(unittest.TestCase):
         Unit([["people"], ["stuff"]]).create()
 
         models = Unit.one(name__in=["people", "stuff"])
-        self.assertRaisesRegex(relations.ModelError, "unit: more than one retrieved", models.retrieve)
+        self.assertRaisesRegex(relations.MultipleError, "unit: more than one retrieved", models.retrieve)
 
         model = Unit.one(name="things")
-        self.assertRaisesRegex(relations.ModelError, "unit: none retrieved", model.retrieve)
+        self.assertRaisesRegex(relations.NotFoundError, "unit: none retrieved", model.retrieve)
 
         self.assertIsNone(model.retrieve(False))
 

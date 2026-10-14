@@ -21,7 +21,7 @@ setup(
     ],
     install_requires=[
         'requests==2.25.1',
-        'relations-dil>=0.6.18'
+        'relations-dil>=0.6.19'
     ],
     url="https://github.com/relations-dil/python-relations-rest",
     author="Gaffer Fitch",
