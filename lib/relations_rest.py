@@ -36,7 +36,12 @@ class Source(relations.Source):
         """
 
         if response.status_code >= 400:
-            raise relations.ModelError(model, response.json().get("message", "API Error"))
+
+            # What the API answered is the error, the same ones the sources raise
+
+            error = {404: relations.NotFoundError, 409: relations.UniqueError}.get(response.status_code, relations.ModelError)
+
+            raise error(model, response.json().get("message", "API Error"))
 
         body = response.json()
 
@@ -174,14 +179,14 @@ class Source(relations.Source):
         matches = self.result(model, model.PLURAL, self.session.get(f"{self.url}/{model.ENDPOINT}", json=body))
 
         if model._mode == "one" and len(matches) > 1:
-            raise relations.ModelError(model, "more than one retrieved")
+            raise relations.MultipleError(model, "more than one retrieved")
 
         if model._mode == "one" and model._role != "child":
 
             if len(matches) < 1:
 
                 if verify:
-                    raise relations.ModelError(model, "none retrieved")
+                    raise relations.NotFoundError(model, "none retrieved")
                 return None
 
             model._record = model._build("update", _read=matches[0])

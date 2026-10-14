@@ -18,6 +18,12 @@ Shipping as 0.5.3, with relations-dil 0.6.16.
 ### Added
 - Tests for a parent key stored in a dict field (`child_inject` in relations-dil 0.6.16): it goes to the server by name and comes back, and creating, counting, retrieving, filtering, updating, clearing and deleting through it work against a relations-restx API.
 
+## [0.5.5] - 2026-10-14
+
+### Changed
+- An error response is the error the other sources raise: a 404 is `relations.NotFoundError`, a 409 is `relations.UniqueError`, any other 4xx or 5xx stays a `relations.ModelError`. The message is the API's, as before.
+- "none retrieved" and "more than one retrieved" are `relations.NotFoundError` and `relations.MultipleError` (same messages, still `ModelError`s). A 409 for a duplicate comes from a server running relations-restx 0.6.7 or later. Needs relations-dil 0.6.19 (relations-dil/python-relations#78).
+
 ## [0.5.4] - 2026-10-14
 
 ### Fixed
