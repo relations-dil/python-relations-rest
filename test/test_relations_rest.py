@@ -19,6 +19,10 @@ class Simple(SourceModel):
     id = int
     name = str
 
+class Slug(SourceModel):
+    id = str
+    name = str
+
 class Plain(SourceModel):
     ID = None
     simple_id = int
@@ -767,6 +771,15 @@ class TestSource(unittest.TestCase):
         self.source.update_field(field, values)
         self.assertEqual(values, {})
 
+        # readonly, a string id is never sent
+
+        field = relations.Field(str, name="id", readonly=True)
+        self.source.field_init(field)
+        values = {}
+        field.value = "abc"
+        self.source.update_field(field, values)
+        self.assertEqual(values, {})
+
     def test_field_mass(self):
 
         # Standard
@@ -795,7 +808,26 @@ class TestSource(unittest.TestCase):
         self.source.update_field(field, values)
         self.assertEqual(values, {})
 
+        # readonly, a string id is never sent
+
+        field = relations.Field(str, name="id", readonly=True)
+        self.source.field_init(field)
+        values = {}
+        field.value = "abc"
+        self.source.field_mass(field, values)
+        self.assertEqual(values, {})
+
     def test_update(self):
+
+        # an id with characters that mean something in a URL is quoted
+
+        slug = Slug(_read={"id": "a b/c?d#e.f:g", "name": "x"})
+        slug.name = "y"
+
+        with unittest.mock.patch.object(self.source.session, "patch") as patch, unittest.mock.patch.object(self.source, "result", return_value=1):
+            self.assertEqual(slug.update(), 1)
+
+        patch.assert_called_once_with(f"{self.source.url}/slug/a%20b%2Fc%3Fd%23e.f%3Ag", json={"slug": {"name": "y"}})
 
         Unit([["people"], ["stuff"]]).create()
 

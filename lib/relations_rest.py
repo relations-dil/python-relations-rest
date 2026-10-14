@@ -4,6 +4,8 @@ Source module for REST backends
 
 # pylint: disable=arguments-differ
 
+import urllib.parse
+
 import requests
 import relations
 
@@ -237,7 +239,7 @@ class Source(relations.Source):
         Updates values with the field's that changed
         """
 
-        if not field.auto and field.delta():
+        if not field.auto and not field.readonly and field.delta():
             values[field.name] = field.original = field.export()
 
     def field_mass(self, field, values):
@@ -245,7 +247,7 @@ class Source(relations.Source):
         Mass values with the field's that changed
         """
 
-        if not field.auto and field.changed:
+        if not field.auto and not field.readonly and field.changed:
             values[field.name] = field.export()
 
     def update(self, model):
@@ -277,7 +279,7 @@ class Source(relations.Source):
                 self.update_record(updating._record, values)
 
                 updated += self.result(updating, "updated", self.session.patch(
-                    f"{self.url}/{model.ENDPOINT}/{updating[model._id]}", json={model.SINGULAR: values})
+                    f"{self.url}/{model.ENDPOINT}/{urllib.parse.quote(str(updating[model._id]), safe='')}", json={model.SINGULAR: values})
                 )
 
                 for parent_child in updating.CHILDREN:
