@@ -18,6 +18,13 @@ Shipping as 0.5.3, with relations-dil 0.6.16.
 ### Added
 - Tests for a parent key stored in a dict field (`child_inject` in relations-dil 0.6.16): it goes to the server by name and comes back, and creating, counting, retrieving, filtering, updating, clearing and deleting through it work against a relations-restx API.
 
+## [0.5.4] - 2026-10-14
+
+### Fixed
+- A readonly field, the string id from relations-dil 0.6.18, is never sent in an update or a mass update (`update_field`, `field_mass`), so a local change to it can't be PATCHed.
+- The id in the update URL is quoted (`urllib.parse.quote`, nothing left unescaped), so an id with a space, `?` or `#` addresses the right record. A `/` in an id is still not routed by Flask's default converter, so keep it out of ids.
+- Needs relations-dil 0.6.18.
+
 ## [0.5.2] - 2026-06-08
 
 - `Source.count` and `Source.retrieve` now send sibling-attribute tie filters (such as `bro__name`) to the API through a new `filter_ties` method.
