@@ -3,7 +3,7 @@
 All notable changes to python-relations-rest are recorded here, newest first. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.5.6] - 2026-10-29
 
 ### Added
 - How a Source treats renewed certificates, proven by `test/test_certificates.py` and written up in the README: a client certificate and a trusted CA given as `cert` and `verify` paths are read again for each new connection, so a renewal is used from the next connection, and an open connection keeps the old one until it closes. The test image has `openssl` for it (relations-dil/python-relations-rest#20).
