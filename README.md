@@ -23,6 +23,21 @@ This is what allows those same models to use a CRUD API as a backend.
 
 Don't have great docs yet so I've included some of the unittests to show what's possible.
 
+# Certificates
+
+A Source passes its extra arguments to its `requests` session, so a client certificate and the CA to trust are given as `cert` and `verify`, both file paths:
+
+```python
+relations_rest.Source("name", "https://api.other-unum.localhost", cert=("/opt/service/certs/tls.crt", "/opt/service/certs/tls.key"), verify="/opt/service/certs/ca.crt")
+```
+
+When those files are renewed (cert-manager renews a certificate and Kubernetes updates the mounted Secret's files), the rule is:
+
+- Each new connection reads the files again, so a renewed client certificate and a renewed trusted CA are used from the next connection on (`test/test_certificates.py` proves both).
+- A connection that is already open keeps what it was opened with. Nothing needs a restart, but a renewal only takes effect when that connection closes, either because the server closed it or because `source.session.close()` was called. The old certificate is not checked again after the handshake, so an open connection keeps working past its expiry.
+- Give the paths, never the contents, and keep no copy of the certificate in memory.
+- Mount the Secret as a directory. Kubernetes never updates a Secret mounted with `subPath`. This is Kubernetes behavior and is not tested here.
+
 # Example
 
 ## define
